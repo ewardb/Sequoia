@@ -18,6 +18,11 @@ import datetime
 import urllib
 import settings
 import pandas as pd
+import mail_util as mailUtil
+import json
+import re
+import os
+import Constants
 
 
 def process():
@@ -54,6 +59,22 @@ def process():
     for strategy, strategy_func in strategies.items():
         check(stocks, strategy, strategy_func)
         time.sleep(2)
+    
+
+    if settings.config['save']['enable']:
+        fileNames = list(filter(fi, os.listdir()))
+        
+        today = time.strftime("%Y-%m-%d", time.localtime()) 
+        sampleFileName = f'{Constants.SAMPLE_PREFIX}:{today}.csv'
+        toEmail(contentFile = sampleFileName, fileNames=fileNames)
+
+        # 邮件已发， 文件删除
+        # sample 文件
+        if os.path.exists(sampleFileName):
+            os.remove(sampleFileName)
+        for fileName in fileNames:
+            os.remove(fileName)
+            logging.info('del {} succ'.format(fileName))
 
     logging.info("************************ process   end ***************************************")
 
@@ -63,6 +84,28 @@ def check(stocks, strategy, strategy_func):
     m_filter = check_enter(end_date=end, strategy_fun=strategy_func)
     results = list(filter(m_filter, stocks))
     push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, results))
+    push.saveStrategyRes(strategy = strategy,res = results)
+
+
+def fi(name):
+    today = time.strftime("%Y-%m-%d", time.localtime())
+    return os.path.isfile(name) & (re.match(f'.*{today}.*', name) is not None) & (name.find(Constants.SAMPLE_PREFIX) == -1)
+
+
+def toEmail(contentFile, fileNames):
+    today = time.strftime("%Y-%m-%d", time.localtime()) 
+    try:
+        with open(contentFile,'r', encoding='utf-8') as file:
+            message = file.read()
+            mailUtil.send_email(from_user=settings.config['mail']['EMAIL_USER'], to_users=settings.config['mail']['EMAIL_TO'], subject=f'{today}_详情',content=message, filenames=fileNames)
+    except FileNotFoundError:
+        print('无法打开指定的文件!')
+    except LookupError:
+        print('指定了未知的编码!')
+    except UnicodeDecodeError:
+        print('读取文件时解码错误!')
+
+
 
 
 def check_enter(end_date=None, strategy_fun=enter.check_volume):
@@ -96,6 +139,7 @@ def statistics(all_data, stocks):
     msg = "涨停数：{}   跌停数：{}\n涨幅大于5%数：{}  跌幅大于5%数：{}\n年线以上个股数量：    {}"\
         .format(limitup, limitdown, up5, down5, ma250_count)
     push.statistics(msg)
+    push.saveSampleRes(msg)
 
 
 def check_exit():

@@ -10,3 +10,21 @@ push:
   admin: "admin@example.com"
   admin_pass: "password"
   user: "user@example.com"
+
+
+# 保存到文件中, 并配合邮件进行发送
+save:
+  enable: true
+
+
+mail:
+  # 邮件服务器域名
+  EMAIL_HOST: "smtp.qq.com"
+  # 邮件服务端口（通常是465)
+  EMAIL_PORT: 465
+  # 登录邮件服务器的账号
+  EMAIL_USER: "865437771@qq.com"
+  # 开通SMTP服务的授权码
+  EMAIL_AUTH: ""
+  # to_userS
+  EMAIL_TO: "wqewardb@gmail.com"
